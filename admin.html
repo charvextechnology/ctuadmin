@@ -1,0 +1,769 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTU Admin Portal</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      color: #172033;
+    }
+
+    header {
+      background: #102b50;
+      color: white;
+      padding: 22px 16px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 7px;
+      font-size: 23px;
+    }
+
+    header p {
+      margin: 0;
+      color: #d5e4f7;
+      font-size: 13px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 650px;
+      margin: 30px auto;
+      padding: 0 16px 30px;
+    }
+
+    .panel {
+      background: white;
+      padding: 24px;
+      border-radius: 14px;
+      box-shadow: 0 5px 22px rgba(16, 43, 80, 0.08);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 21px;
+    }
+
+    label {
+      display: block;
+      margin: 17px 0 7px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 16px;
+      background: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 18px;
+      border: none;
+      border-radius: 8px;
+      background: #1765b1;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+    }
+
+    .secondary {
+      background: #102b50;
+    }
+
+    .message {
+      margin-top: 15px;
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .application {
+      border: 1px solid #dbe3ed;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 14px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .application p {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .muted {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #64748b;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="admin-header">
+  <img
+    src="charvexunilogo.png"
+    alt="Charvex Technology University Logo"
+    class="admin-logo"
+  >
+  <h1>CHARVEX TECHNOLOGY UNIVERSITY</h1>
+  <p>Admissions Administration Portal</p>
+</header>
+
+  <main>
+    <section class="panel" id="loginPanel">
+      <h2>Administrator Sign In</h2>
+      <p class="muted">
+        Sign in using your registered CTU administrator account.
+      </p>
+
+      <form id="adminLoginForm">
+        <label for="adminEmail">Email Address</label>
+        <input
+          type="email"
+          id="adminEmail"
+          autocomplete="username"
+          required
+        >
+
+        <label for="adminPassword">Password</label>
+        <input
+          type="password"
+          id="adminPassword"
+          autocomplete="current-password"
+          required
+        >
+
+        <button type="submit" id="loginButton">
+          Sign In
+        </button>
+      </form>
+
+      <p id="loginMessage" class="message" role="status"></p>
+    </section>
+
+    <section class="panel hidden" id="dashboardPanel">
+      <h2>Admissions Dashboard</h2>
+      <p id="adminWelcome" class="muted"></p>
+      
+<!-- DASHBOARD STATISTICS -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <span>Total Applications</span>
+    <strong id="totalCount">0</strong>
+  </div>
+
+  <div class="stat-card">
+    <span>Pending</span>
+    <strong id="pendingCount">0</strong>
+  </div>
+
+  <div class="stat-card">
+    <span>Accepted</span>
+    <strong id="acceptedCount">0</strong>
+  </div>
+
+  <div class="stat-card">
+    <span>Rejected</span>
+    <strong id="rejectedCount">0</strong>
+  </div>
+</div>
+
+<!-- SEARCH AND FILTER -->
+<label for="applicationSearch">Search Applicants</label>
+<input
+  type="search"
+  id="applicationSearch"
+  placeholder="Search name, email or course..."
+>
+
+<label for="statusFilter">Filter by Admission Status</label>
+<select id="statusFilter">
+  <option value="all">All Applications</option>
+  <option value="pending">Pending</option>
+  <option value="accepted">Accepted</option>
+  <option value="rejected">Rejected</option>
+</select>
+
+      <button type="button" id="refreshButton">
+        Refresh Applications
+      </button>
+
+      <p id="dashboardMessage" class="message" role="status"></p>
+      <div id="applicationsList"></div>
+
+      <button type="button" id="logoutButton" class="secondary">
+        Sign Out
+      </button>
+    </section>
+  </main>
+
+  <footer>
+    CTU Admissions Administration
+  </footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  const SUPABASE_URL =
+    "https://rnpwtxmxkguuzwwipucf.supabase.co";
+
+  const SUPABASE_PUBLIC_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJucHd0eG14a2d1dXp3d2lwdWNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwMTIzMjEsImV4cCI6MjEwNzU4ODMyMX0.NvrCOjrQlFtjHpD2-UP7kYNwm4wmHGTaU_IN3aQwsHM";
+
+  const db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLIC_KEY
+  );
+
+  const loginForm = document.getElementById("adminLoginForm");
+  const loginButton = document.getElementById("loginButton");
+  const loginMessage = document.getElementById("loginMessage");
+  const loginPanel = document.getElementById("loginPanel");
+  const dashboardPanel = document.getElementById("dashboardPanel");
+
+  loginForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    loginButton.disabled = true;
+    loginButton.textContent = "Signing in...";
+    loginMessage.textContent = "";
+    loginMessage.style.color = "#b42318";
+
+    const email = document.getElementById("adminEmail").value.trim();
+    const password = document.getElementById("adminPassword").value;
+
+    try {
+      const { data, error } = await db.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (error) throw error;
+
+      const user = data.user;
+
+      const { data: adminRecord, error: adminError } = await db
+        .from("admin_users")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (adminError) throw adminError;
+
+      if (!adminRecord) {
+        await db.auth.signOut();
+        throw new Error(
+          "This account is not registered as a CTU administrator."
+        );
+      }
+
+      loginPanel.classList.add("hidden");
+      dashboardPanel.classList.remove("hidden");
+
+      document.getElementById("adminWelcome").textContent =
+        "Signed in as " + user.email;
+
+      loginMessage.textContent = "";
+      await loadApplications();
+
+    } catch (error) {
+      loginMessage.textContent =
+        error.message || "Login failed. Please try again.";
+    } finally {
+      loginButton.disabled = false;
+      loginButton.textContent = "Sign In";
+    }
+  });
+
+  
+let allApplications = [];
+
+function renderApplications() {
+  const list = document.getElementById("applicationsList");
+  const searchInput = document.getElementById("applicationSearch");
+  const statusFilter = document.getElementById("statusFilter");
+
+  const searchTerm = searchInput.value.trim().toLowerCase();
+  const selectedStatus = statusFilter.value;
+
+  const filteredApplications = allApplications.filter(function(app) {
+    const name = String(app.full_name || app.name || "").toLowerCase();
+    const email = String(app.email || "").toLowerCase();
+    const course = String(app.course || app.programme || "").toLowerCase();
+    const status = String(app.admission_status || "pending").toLowerCase();
+
+    const matchesSearch =
+      name.includes(searchTerm) ||
+      email.includes(searchTerm) ||
+      course.includes(searchTerm);
+
+    const matchesStatus =
+      selectedStatus === "all" || status === selectedStatus;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  list.replaceChildren();
+
+  filteredApplications.forEach(function(app) {
+    const card = document.createElement("article");
+    card.className = "application";
+
+    const heading = document.createElement("h3");
+    heading.textContent = app.full_name || app.name || "Applicant";
+
+    const details = document.createElement("p");
+    details.style.whiteSpace = "pre-line";
+    details.textContent =
+      "Application ID: " + app.id +
+      "\nEmail: " + (app.email || "Not provided") +
+      "\nCourse: " + (app.course || app.programme || "Not provided") +
+      "\nStatus: " + (app.admission_status || "pending");
+
+    const statusLabel = document.createElement("label");
+    statusLabel.textContent = "Admission decision";
+
+    const statusSelect = document.createElement("select");
+
+    [
+      ["pending", "Pending"],
+      ["accepted", "Accepted"],
+      ["rejected", "Rejected"]
+    ].forEach(function(item) {
+      const option = document.createElement("option");
+      option.value = item[0];
+      option.textContent = item[1];
+      statusSelect.appendChild(option);
+    });
+
+    statusSelect.value =
+      String(app.admission_status || "pending").toLowerCase();
+
+    const saveButton = document.createElement("button");
+    saveButton.textContent = "Save Decision";
+
+    saveButton.addEventListener("click", async function() {
+      const newStatus = statusSelect.value;
+      saveButton.disabled = true;
+      saveButton.textContent = "Saving...";
+
+      try {
+        
+const { data: userData, error: userError } =
+  await db.auth.getUser();
+
+if (userError) throw userError;
+
+const currentUser = userData.user;
+
+if (!currentUser) {
+  throw new Error("Please sign in again.");
+}
+
+const { data: currentApp, error: fetchError } = await db
+  .from("applications")
+  .select("admission_status")
+  .eq("id", app.id)
+  .single();
+
+if (fetchError) throw fetchError;
+
+const previousStatus = String(
+  currentApp.admission_status || "pending"
+).toLowerCase();
+
+if (previousStatus !== newStatus) {
+  const { data: updatedApp, error: updateError } = await db
+    .from("applications")
+    .update({ admission_status: newStatus })
+    .eq("id", app.id)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) throw updateError;
+
+  if (!updatedApp) {
+    throw new Error("The decision was not updated.");
+  }
+
+  const { error: historyError } = await db
+    .from("admission_decision_history")
+    .insert({
+      application_id: app.id,
+      previous_status: previousStatus,
+      new_status: newStatus,
+      changed_by: currentUser.id,
+      changed_by_email: currentUser.email
+    });
+
+  if (historyError) {
+    throw new Error(
+      "Decision updated, but history recording failed: " +
+      historyError.message
+    );
+  }
+}
+        document.getElementById("dashboardMessage").textContent =
+          "Decision saved successfully.";
+
+        await loadApplications();
+      } catch (error) {
+        document.getElementById("dashboardMessage").textContent =
+          "Could not save decision: " + error.message;
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Save Decision";
+      }
+    });
+
+    card.appendChild(heading);
+    card.appendChild(details);
+    
+const viewButton = document.createElement("button");
+viewButton.textContent = "View Full Details";
+viewButton.className = "secondary";
+
+viewButton.addEventListener("click", function() {
+  const detailBox = document.createElement("div");
+  detailBox.className = "application-full-details";
+
+  const title = document.createElement("h4");
+  title.textContent = "Full Application Details";
+
+  
+const content = document.createElement("div");
+content.className = "formatted-application-details";
+
+function addSection(titleText) {
+  const section = document.createElement("div");
+  section.style.marginBottom = "18px";
+  section.style.padding = "12px";
+  section.style.border = "1px solid #ddd";
+  section.style.borderRadius = "10px";
+
+  const title = document.createElement("h4");
+  title.textContent = titleText;
+  title.style.marginTop = "0";
+  title.style.marginBottom = "12px";
+
+  section.appendChild(title);
+  content.appendChild(section);
+  return section;
+}
+
+function addField(section, label, value) {
+  if (value === null || value === undefined || value === "") {
+    return;
+  }
+
+  const row = document.createElement("p");
+  row.style.margin = "8px 0";
+  row.style.overflowWrap = "anywhere";
+
+  const strong = document.createElement("strong");
+  strong.textContent = label + ": ";
+
+  const text = document.createElement("span");
+  text.textContent = String(value);
+
+  row.appendChild(strong);
+  row.appendChild(text);
+  section.appendChild(row);
+}
+
+const personal = addSection("Personal Information");
+
+[
+  ["Full Name", app.full_name],
+  ["Date of Birth", app.date_of_birth],
+  ["Gender", app.gender],
+  ["Email", app.email],
+  ["Phone", app.phone],
+  ["State of Origin", app.state_of_origin],
+  ["Country", app.country],
+  ["Address", app.address]
+].forEach(([label, value]) => addField(personal, label, value));
+
+const admission = addSection("Admission Details");
+
+[
+  ["Application Number", app.application_number],
+  ["Admission Type", app.admission_type],
+  ["Preferred Course", app.preferred_course],
+  ["JAMB Registration Number", app.jamb_number],
+  ["JAMB Year", app.jamb_year],
+  ["JAMB Score", app.jamb_score],
+  ["Secondary School", app.secondary_school],
+  ["Previous Institution", app.previous_institution],
+  ["Qualification", app.qualification],
+  ["Qualification Year", app.qualification_year],
+  ["Qualification Number", app.qualification_number]
+].forEach(([label, value]) => addField(admission, label, value));
+
+const results = app.olevel_results;
+
+if (results && typeof results === "object") {
+  const olevel = addSection("O'Level Results");
+
+  function addSitting(sitting, sittingName) {
+    if (!sitting || typeof sitting !== "object") return;
+
+    addField(olevel, sittingName + " Exam Type", sitting.examType);
+    addField(olevel, sittingName + " Exam Year", sitting.examYear);
+
+    if (Array.isArray(sitting.subjects)) {
+      const table = document.createElement("table");
+      table.style.width = "100%";
+      table.style.borderCollapse = "collapse";
+      table.style.marginTop = "8px";
+
+      const header = document.createElement("tr");
+
+      ["Subject", "Grade"].forEach(label => {
+        const th = document.createElement("th");
+        th.textContent = label;
+        th.style.textAlign = "left";
+        th.style.padding = "8px";
+        th.style.borderBottom = "1px solid #ddd";
+        header.appendChild(th);
+      });
+
+      table.appendChild(header);
+
+      sitting.subjects.forEach(item => {
+        const tr = document.createElement("tr");
+
+        [item.subject, item.grade].forEach(value => {
+          const td = document.createElement("td");
+          td.textContent = value || "—";
+          td.style.padding = "8px";
+          td.style.borderBottom = "1px solid #eee";
+          tr.appendChild(td);
+        });
+
+        table.appendChild(tr);
+      });
+
+      olevel.appendChild(table);
+    }
+  }
+
+  addSitting(results.firstSitting, "First Sitting");
+  addSitting(results.secondSitting, "Second Sitting");
+}
+  detailBox.appendChild(title);
+  detailBox.appendChild(content);
+
+  const existing = card.querySelector(".application-full-details");
+
+  if (existing) {
+    existing.remove();
+    viewButton.textContent = "View Full Details";
+  } else {
+    card.appendChild(detailBox);
+    viewButton.textContent = "Hide Full Details";
+  }
+});
+
+card.appendChild(viewButton);
+    card.appendChild(statusLabel);
+    card.appendChild(statusSelect);
+    card.appendChild(saveButton);
+    
+const historyButton = document.createElement("button");
+historyButton.textContent = "View Decision History";
+
+historyButton.addEventListener("click", async function() {
+  const existingHistory = card.querySelector(".decision-history");
+
+  if (existingHistory) {
+    existingHistory.remove();
+    historyButton.textContent = "View Decision History";
+    return;
+  }
+
+  historyButton.disabled = true;
+  historyButton.textContent = "Loading history...";
+
+  try {
+    const { data, error } = await db
+      .from("admission_decision_history")
+      .select("previous_status,new_status,changed_by_email,changed_at")
+      .eq("application_id", app.id)
+      .order("changed_at", { ascending: false });
+
+    if (error) throw error;
+
+    const historyBox = document.createElement("div");
+    historyBox.className = "decision-history";
+
+    const historyHeading = document.createElement("h4");
+    historyHeading.textContent = "Decision History";
+    historyBox.appendChild(historyHeading);
+
+    if (!data || data.length === 0) {
+      const message = document.createElement("p");
+      message.textContent = "No decision changes recorded yet.";
+      historyBox.appendChild(message);
+    } else {
+      data.forEach(function(entry) {
+        const item = document.createElement("div");
+
+        const change = document.createElement("p");
+        change.textContent =
+          "Previous: " + entry.previous_status +
+          " → New: " + entry.new_status;
+        item.appendChild(change);
+
+        const date = document.createElement("p");
+        date.textContent =
+          "Date: " + new Date(entry.changed_at).toLocaleString();
+        item.appendChild(date);
+
+        const admin = document.createElement("p");
+        admin.textContent =
+          "Administrator: " +
+          (entry.changed_by_email || "Unknown");
+        item.appendChild(admin);
+
+        historyBox.appendChild(item);
+      });
+    }
+
+    card.appendChild(historyBox);
+    historyButton.textContent = "Hide Decision History";
+
+  } catch (error) {
+    document.getElementById("dashboardMessage").textContent =
+      "Could not load decision history: " + error.message;
+  } finally {
+    historyButton.disabled = false;
+    if (!card.querySelector(".decision-history")) {
+      historyButton.textContent = "View Decision History";
+    }
+  }
+});
+card.appendChild(historyButton);
+
+    list.appendChild(card);
+  });
+
+  if (filteredApplications.length === 0) {
+    const emptyMessage = document.createElement("p");
+    emptyMessage.textContent = searchTerm || selectedStatus !== "all"
+      ? "No applications match your search or filter."
+      : "No applications have been submitted yet.";
+
+    list.appendChild(emptyMessage);
+  }
+}
+
+async function loadApplications() {
+  const message = document.getElementById("dashboardMessage");
+  const refreshButton = document.getElementById("refreshButton");
+
+  message.textContent = "Loading applications...";
+  refreshButton.disabled = true;
+
+  try {
+    const { data, error } = await db
+      .from("applications")
+      .select("*")
+      .order("submitted_at", { ascending: false });
+
+    if (error) throw error;
+
+    allApplications = data || [];
+
+    const counts = {
+      total: allApplications.length,
+      pending: 0,
+      accepted: 0,
+      rejected: 0
+    };
+
+    allApplications.forEach(function(app) {
+      const status = String(
+        app.admission_status || "pending"
+      ).toLowerCase();
+
+      if (Object.prototype.hasOwnProperty.call(counts, status)) {
+        if (status !== "total") counts[status]++;
+      } else {
+        counts.pending++;
+      }
+    });
+
+    document.getElementById("totalCount").textContent = counts.total;
+    document.getElementById("pendingCount").textContent = counts.pending;
+    document.getElementById("acceptedCount").textContent = counts.accepted;
+    document.getElementById("rejectedCount").textContent = counts.rejected;
+
+    renderApplications();
+
+    message.textContent =
+      "Applications loaded: " + allApplications.length;
+  } catch (error) {
+    message.textContent =
+      "Could not load applications: " + error.message;
+  } finally {
+    refreshButton.disabled = false;
+  }
+}
+
+  document.getElementById("refreshButton").addEventListener(
+    "click",
+    loadApplications
+  );
+
+  document.getElementById("logoutButton").addEventListener(
+    "click",
+    async function() {
+      await db.auth.signOut();
+      dashboardPanel.classList.add("hidden");
+      loginPanel.classList.remove("hidden");
+      loginForm.reset();
+      loginMessage.textContent = "You have signed out.";
+      loginMessage.style.color = "#167a3f";
+      document.getElementById("applicationsList").replaceChildren();
+    }
+  );
+</script>
+</body>
+</html>
